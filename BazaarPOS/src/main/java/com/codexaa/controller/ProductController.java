@@ -2,84 +2,41 @@ package com.codexaa.controller;
 
 import com.codexaa.dto.ProductDTO;
 import com.codexaa.exception.UserExceptions;
-import com.codexaa.model.User;
-import com.codexaa.response.ApiResponse;
 import com.codexaa.service.ProductService;
-import com.codexaa.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/products")
+@RequiredArgsConstructor
 public class ProductController {
 
     private final ProductService productService;
-    private final UserService userService;
-
 
     @PostMapping
-    public ResponseEntity<ProductDTO> createProduct(
-            @RequestBody ProductDTO productDTO,
-            @RequestHeader("Authorization") String jwt
-    ) throws UserExceptions {
-
-        User user = userService.getUserFromJwtToken(jwt);
-
-        return ResponseEntity.ok(productService.createProduct(productDTO, user));
+    public ProductDTO create(@RequestBody ProductDTO dto) throws UserExceptions {
+        return productService.create(dto);
     }
-
 
     @GetMapping("/store/{storeId}")
-    public ResponseEntity<List<ProductDTO>> getByStoreId(
-            @PathVariable Long storeId
-    ) {
-
-        return ResponseEntity.ok(productService.getProductsByStoreId(storeId));
+    public Page<ProductDTO> getByStore(
+            @PathVariable Long storeId,
+            @RequestParam(required = false) String keyword,
+            Pageable pageable) {
+        return productService.getByStore(storeId, keyword, pageable);
     }
-
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProductDTO> updateProduct(
+    public ProductDTO update(
             @PathVariable Long id,
-            @RequestBody ProductDTO productDTO,
-            @RequestHeader("Authorization") String jwt
-    ) throws UserExceptions {
-
-        User user = userService.getUserFromJwtToken(jwt);
-
-        return ResponseEntity.ok(productService.updateProduct(id, productDTO, user));
+            @RequestBody ProductDTO dto) throws UserExceptions {
+        return productService.update(id, dto);
     }
-
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse> deleteProduct(
-            @PathVariable Long id,
-            @RequestHeader("Authorization") String jwt
-    ) throws UserExceptions {
-
-        User user = userService.getUserFromJwtToken(jwt);
-
-        productService.deleteProduct(id, user);
-
-        ApiResponse response = new ApiResponse();
-        response.setMessage("Product deleted successfully");
-
-        return ResponseEntity.ok(response);
-    }
-
-
-    @GetMapping("/store/{storeId}/search")
-    public ResponseEntity<List<ProductDTO>> searchByKeyword(
-            @PathVariable Long storeId,
-            @RequestParam String keyword
-    ) {
-
-        return ResponseEntity.ok(
-                productService.searchProducts(storeId, keyword)
-        );
+    public void delete(@PathVariable Long id) {
+        productService.delete(id);
     }
 }

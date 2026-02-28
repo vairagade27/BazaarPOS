@@ -6,39 +6,38 @@ import com.codexaa.model.Store;
 
 public class CategoryMapper {
 
-
+    // ENTITY ➜ DTO
     public static CategoryDTO toDTO(Category category) {
 
-        if (category == null) {
-            return null;
-        }
+        if (category == null) return null;
 
-        CategoryDTO dto = new CategoryDTO();
-        dto.setId(category.getId());
-        dto.setName(category.getName());
-
-        if (category.getStore() != null) {
-            dto.setStoreId(category.getStore().getId());
-        }
-
-        return dto;
+        return CategoryDTO.builder()
+                .id(category.getId())
+                .name(category.getName())
+                .storeId(
+                        category.getStore() != null
+                                ? category.getStore().getId()
+                                : null
+                )
+                .build();
     }
 
+    // DTO ➜ ENTITY (CREATE)
     public static Category toEntity(CategoryDTO dto, Store store) {
 
-        if (dto == null) {
-            return null;
-        }
+        if (dto == null) return null;
 
         return Category.builder()
-                .name(dto.getName())
+                .name(dto.getName().trim())
                 .store(store)
                 .build();
     }
 
-
+    // UPDATE EXISTING ENTITY
     public static void updateEntity(Category category, CategoryDTO dto) {
 
-        category.setName(dto.getName());
+        if (dto.getName() != null && !dto.getName().isBlank()) {
+            category.setName(dto.getName().trim());
+        }
     }
 }

@@ -4,75 +4,72 @@ import com.codexaa.domain.UserRole;
 import com.codexaa.dto.CategoryDTO;
 import com.codexaa.exception.UserExceptions;
 import com.codexaa.mapper.CategoryMapper;
-import com.codexaa.mapper.ProductMapper;
 import com.codexaa.model.Category;
-import com.codexaa.model.Product;
 import com.codexaa.model.Store;
 import com.codexaa.model.User;
 import com.codexaa.repository.CategoryRepository;
 import com.codexaa.repository.StoreRepository;
 import com.codexaa.service.CategoryService;
 import com.codexaa.service.UserService;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
 
-    private  final CategoryRepository categoryRepository;
-    private final UserService userService;
+    private final CategoryRepository categoryRepository;
     private final StoreRepository storeRepository;
+    private final UserService userService;
+
     @Override
-    public CategoryDTO createCategory(CategoryDTO categoryDTO) throws UserExceptions {
+    public CategoryDTO createCategory(CategoryDTO dto) throws UserExceptions {
 
-        User user=userService.getCurrentUser();
-        Store store=storeRepository.findById(categoryDTO.getId()).orElseThrow(()-> new UserExceptions("Store Not found"));
-        Category category = Category.builder()
-                .name(categoryDTO.getName())
-                .store(store)
-                .build();
+        User user = userService.getCurrentUser();
 
-        Category saved = categoryRepository.save(category);
+        Store store = storeRepository.findById(dto.getStoreId())
+                .orElseThrow(() -> new UserExceptions("Store not found"));
 
-        return CategoryMapper.toDTO(saved);
+        checkAuthority(user, store);
+
+        if (categoryRepository.existsByNameAndStoreId(dto.getName(), store.getId())) {
+            throw new UserExceptions("Category already exists in this store");
+        }
+
+        Category category = CategoryMapper.toEntity(dto, store);
+
+        return CategoryMapper.toDTO(categoryRepository.save(category));
     }
 
     @Override
-    public List<CategoryDTO> getCategoryByStore(Long StoreId) {
-        List<Category> categories = categoryRepository.findBytoreId(StoreId);
-
-        return categories.stream()
-                .map(CategoryMapper::toDTO)
-                .collect(Collectors.toList());
-
+    public Page<CategoryDTO> getCategoriesByStore(Long storeId, Pageable pageable) {
+        return categoryRepository.findByStoreId(storeId, pageable)
+                .map(CategoryMapper::toDTO);
     }
+
     @Override
-    public CategoryDTO updateCategory(Long id, CategoryDTO categoryDTO) throws UserExceptions {
+    public CategoryDTO updateCategory(Long id, CategoryDTO dto) throws UserExceptions {
 
         User user = userService.getCurrentUser();
 
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new UserExceptions("Category Not Found"));
+                .orElseThrow(() -> new UserExceptions("Category not found"));
 
-        // Ownership check
-        if (!category.getStore().getStoreAdmin().getId().equals(user.getId())) {
-            throw new UserExceptions("You are not allowed to update this category");
+        checkAuthority(user, category.getStore());
+
+        if (dto.getName() != null &&
+                !dto.getName().equals(category.getName()) &&
+                categoryRepository.existsByNameAndStoreId(dto.getName(),
+                        category.getStore().getId())) {
+            throw new UserExceptions("Category already exists in this store");
         }
 
-        // Update only if not null (safer for partial updates)
-        if (categoryDTO.getName() != null) {
-            category.setName(categoryDTO.getName());
-        }
+        CategoryMapper.updateEntity(category, dto);
 
-        Category updatedCategory = categoryRepository.save(category);
-
-        return CategoryMapper.toDTO(updatedCategory);
+        return CategoryMapper.toDTO(categoryRepository.save(category));
     }
-
 
     @Override
     public void deleteCategory(Long id) throws UserExceptions {
@@ -80,22 +77,24 @@ public class CategoryServiceImpl implements CategoryService {
         User user = userService.getCurrentUser();
 
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new UserExceptions("Category Not Found"));
+                .orElseThrow(() -> new UserExceptions("Category not found"));
 
-        if (!category.getStore().getStoreAdmin().getId().equals(user.getId())) {
-            throw new UserExceptions("You are not allowed to delete this category");
-        }
+        checkAuthority(user, category.getStore());
 
         categoryRepository.delete(category);
     }
 
-    private void  checkAuthority(User user,Store store) throws Exception {
-        boolean isAdmin=user.getRole().equals(UserRole.ROLE_STORE_ADMIN);
-        boolean isMagager=user.getRole().equals(UserRole.ROLE_BRANCH_MANAGER);
-        boolean isSameStore=user.equals(store.getStoreAdmin());
+    private void checkAuthority(User user, Store store) throws UserExceptions {
 
-        if(!(isAdmin && isSameStore) && !isMagager){
-            throw new Exception("You dont have permision to manege this category");
+        boolean isStoreAdmin =
+                user.getRole().equals(UserRole.ROLE_STORE_ADMIN)
+                        && user.getId().equals(store.getStoreAdmin().getId());
+
+        boolean isBranchManager =
+                user.getRole().equals(UserRole.ROLE_BRANCH_MANAGER);
+
+        if (!isStoreAdmin && !isBranchManager) {
+            throw new UserExceptions("No permission");
         }
     }
 }

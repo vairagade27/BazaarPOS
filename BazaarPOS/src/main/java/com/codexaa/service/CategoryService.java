@@ -2,13 +2,16 @@ package com.codexaa.service;
 
 import com.codexaa.dto.CategoryDTO;
 import com.codexaa.exception.UserExceptions;
-import com.codexaa.model.Category;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface CategoryService {
-    CategoryDTO createCategory(CategoryDTO categoryDTO) throws UserExceptions;
-    List<CategoryDTO> getCategoryByStore(Long StoreId);
-    CategoryDTO updateCategory(Long id ,CategoryDTO categoryDTO) throws UserExceptions;
+
+    CategoryDTO createCategory(CategoryDTO dto) throws UserExceptions;
+
+    Page<CategoryDTO> getCategoriesByStore(Long storeId, Pageable pageable);
+
+    CategoryDTO updateCategory(Long id, CategoryDTO dto) throws UserExceptions;
+
     void deleteCategory(Long id) throws UserExceptions;
 }

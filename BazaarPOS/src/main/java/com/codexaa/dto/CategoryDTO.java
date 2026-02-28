@@ -1,16 +1,14 @@
 package com.codexaa.dto;
 
-import com.codexaa.model.Store;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@Data
+@Getter
+@Setter
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class CategoryDTO {
+
     private Long id;
     private String name;
     private Long storeId;
