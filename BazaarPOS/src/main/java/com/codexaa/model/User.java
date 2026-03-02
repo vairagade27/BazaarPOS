@@ -4,6 +4,8 @@ import com.codexaa.domain.UserRole;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 @Entity
@@ -29,7 +31,12 @@ public class User {
     private String password;
 
     @ManyToOne
+    @JoinColumn(name = "store_id")
     private Store store;
+
+    @ManyToOne
+    @JoinColumn(name = "branch_id")
+    private Branch branch;
 
     private String phone;
 
@@ -37,8 +44,12 @@ public class User {
     @Column(nullable = false)
     private UserRole role;
 
+    @CreationTimestamp
+    @Column(updatable = false)
     private LocalDateTime createdAt;
+
+    @UpdateTimestamp
     private LocalDateTime updatedAt;
+
     private LocalDateTime lastLogin;
 }
-
