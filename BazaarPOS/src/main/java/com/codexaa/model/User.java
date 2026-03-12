@@ -8,6 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Setter
@@ -43,6 +44,10 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
+
+    // USER ACTIVE OR BLOCKED
+    @Column(nullable = false)
+    private boolean enabled = true;
 
     @CreationTimestamp
     @Column(updatable = false)

@@ -4,7 +4,9 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -28,6 +30,12 @@ public class JwtValidator extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+        // Allow CORS preflight requests
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String header = request.getHeader("Authorization");
 
         if (header != null && header.startsWith("Bearer ")) {
@@ -36,16 +44,19 @@ public class JwtValidator extends OncePerRequestFilter {
 
             try {
 
+                // Extract email and role from JWT
                 String email = jwtProvider.getEmailFromToken(token);
+                String role = jwtProvider.getRoleFromToken(token);
 
-                // 🔥 IMPORTANT: Set authorities (even if empty list)
+                // Create authentication with authority
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 email,
                                 null,
-                                List.of() // you can add role here later
+                                List.of(new SimpleGrantedAuthority(role))
                         );
 
+                // Set authentication in security context
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
             } catch (Exception e) {

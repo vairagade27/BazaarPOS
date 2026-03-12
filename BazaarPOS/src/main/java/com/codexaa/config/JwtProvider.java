@@ -3,6 +3,7 @@ package com.codexaa.config;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
@@ -20,13 +21,13 @@ public class JwtProvider {
 
     private static final long EXPIRATION_TIME = 86400000; // 1 day
 
-    // ✅ ONLY ONE TOKEN GENERATION METHOD
+    // Generate JWT Token
     public String generateToken(Authentication authentication) {
 
         String authorities = populateAuthorities(authentication.getAuthorities());
 
         return Jwts.builder()
-                .setSubject(authentication.getName())  // email
+                .setSubject(authentication.getName()) // email
                 .claim("authorities", authorities)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
@@ -34,7 +35,24 @@ public class JwtProvider {
                 .compact();
     }
 
+    // Extract email
     public String getEmailFromToken(String token) {
+
+        Claims claims = extractClaims(token);
+
+        return claims.getSubject();
+    }
+
+    // Extract role
+    public String getRoleFromToken(String token) {
+
+        Claims claims = extractClaims(token);
+
+        return claims.get("authorities", String.class);
+    }
+
+    // Common method for extracting claims
+    private Claims extractClaims(String token) {
 
         if (token == null) {
             throw new RuntimeException("JWT token is missing");
@@ -44,18 +62,18 @@ public class JwtProvider {
             token = token.substring(7);
         }
 
-        token = token.trim(); // remove accidental spaces
+        token = token.trim();
 
-        Claims claims = Jwts.parserBuilder()
+        return Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-
-        return claims.getSubject();
     }
 
+    // Convert authorities list to string
     private String populateAuthorities(Collection<? extends GrantedAuthority> authorities) {
+
         return authorities.stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
