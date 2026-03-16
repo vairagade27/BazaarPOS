@@ -18,7 +18,6 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("/api/stores")
 public class StoreController {
-
     private final StoreService storeService;
     private final UserService userService;
 

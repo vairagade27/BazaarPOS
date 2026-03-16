@@ -5,18 +5,16 @@ import com.codexaa.dto.StoreDto;
 import com.codexaa.exception.UserExceptions;
 import com.codexaa.mapper.StoreMapper;
 import com.codexaa.model.Store;
-import com.codexaa.model.StoreContact;
 import com.codexaa.model.User;
 import com.codexaa.repository.StoreRepository;
 import com.codexaa.service.StoreService;
 import com.codexaa.service.UserService;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class StoreServiceImpl implements StoreService {
@@ -27,7 +25,18 @@ public class StoreServiceImpl implements StoreService {
     @Override
     public StoreDto createStore(StoreDto storeDto, User user) {
 
-        Store store = StoreMapper.toEntity(storeDto, user);
+        User storeAdmin = userService.getUserById(storeDto.getStoreAdminId());
+
+        if (storeAdmin == null) {
+            throw new RuntimeException("Store admin not found");
+        }
+
+        Store store = new Store();
+        store.setBrand(storeDto.getBrand());
+        store.setDescription(storeDto.getDescription());
+        store.setStoreType(storeDto.getStoreType());
+        store.setStoreAdmin(storeAdmin);
+
         store.setStatus(StoreStatus.PENDING);
         store.setCreatedAt(LocalDateTime.now());
 

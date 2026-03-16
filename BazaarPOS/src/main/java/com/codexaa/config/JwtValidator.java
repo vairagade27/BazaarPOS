@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -44,22 +45,36 @@ public class JwtValidator extends OncePerRequestFilter {
 
             try {
 
-                // Extract email and role from JWT
+                // Extract email and authorities from JWT
                 String email = jwtProvider.getEmailFromToken(token);
-                String role = jwtProvider.getRoleFromToken(token);
+                String authoritiesStr = jwtProvider.getRoleFromToken(token);
 
-                // Create authentication with authority
+                // Parse comma-separated authorities and create authority list
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+
+                if (authoritiesStr != null && !authoritiesStr.isEmpty()) {
+                    String[] authArray = authoritiesStr.split(",");
+                    for (String auth : authArray) {
+                        String trimmedAuth = auth.trim();
+                        if (!trimmedAuth.isEmpty()) {
+                            authorities.add(new SimpleGrantedAuthority(trimmedAuth));
+                        }
+                    }
+                }
+
+                // Create authentication with all authorities
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 email,
                                 null,
-                                List.of(new SimpleGrantedAuthority(role))
+                                authorities
                         );
 
                 // Set authentication in security context
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
             } catch (Exception e) {
+                System.err.println("❌ JWT Validation Failed: " + e.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }

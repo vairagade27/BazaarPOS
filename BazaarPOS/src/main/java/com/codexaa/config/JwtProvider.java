@@ -21,7 +21,9 @@ public class JwtProvider {
 
     private static final long EXPIRATION_TIME = 86400000; // 1 day
 
-    // Generate JWT Token
+    /**
+     * Generate JWT Token from Authentication object
+     */
     public String generateToken(Authentication authentication) {
 
         String authorities = populateAuthorities(authentication.getAuthorities());
@@ -35,43 +37,78 @@ public class JwtProvider {
                 .compact();
     }
 
-    // Extract email
+    /**
+     * Generate JWT Token from User Email and Role (PRIMARY METHOD)
+     * Use this in AuthService for login/register to ensure role is always included
+     */
+    public String generateTokenFromUser(String email, String role) {
+        return Jwts.builder()
+                .setSubject(email)
+                .claim("authorities", role)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .signWith(key)
+                .compact();
+    }
+
+    /**
+     * Extract email from JWT token
+     */
     public String getEmailFromToken(String token) {
-
         Claims claims = extractClaims(token);
-
         return claims.getSubject();
     }
 
-    // Extract role
+    /**
+     * Extract authorities/role from JWT token
+     */
     public String getRoleFromToken(String token) {
-
         Claims claims = extractClaims(token);
-
         return claims.get("authorities", String.class);
     }
 
-    // Common method for extracting claims
+    /**
+     * Validate if JWT token is valid
+     */
+    public boolean isTokenValid(String token) {
+        try {
+            extractClaims(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Extract claims from JWT token
+     */
     private Claims extractClaims(String token) {
 
         if (token == null) {
             throw new RuntimeException("JWT token is missing");
         }
 
+        // Remove Bearer prefix if present
         if (token.startsWith("Bearer ")) {
             token = token.substring(7);
         }
 
         token = token.trim();
 
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid JWT token: " + e.getMessage(), e);
+        }
     }
 
-    // Convert authorities list to string
+    /**
+     * Convert authorities list to comma-separated string
+     */
     private String populateAuthorities(Collection<? extends GrantedAuthority> authorities) {
 
         return authorities.stream()

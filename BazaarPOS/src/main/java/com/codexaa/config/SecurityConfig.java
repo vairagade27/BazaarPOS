@@ -56,6 +56,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/store-admin/**")
                         .hasAuthority("ROLE_STORE_ADMIN")
 
+                        // Store APIs (for store owners)
+                        .requestMatchers("/api/stores/**")
+                        .hasAnyAuthority("ROLE_STORE_ADMIN", "ROLE_ADMIN")
+
                         // Branch Manager APIs
                         .requestMatchers("/api/branch/**")
                         .hasAuthority("ROLE_BRANCH_MANAGER")
@@ -92,16 +96,19 @@ public class SecurityConfig {
 
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",
-                "http://localhost:5174"
+                "http://localhost:5174",
+                "http://localhost:3000"
         ));
 
         config.setAllowedMethods(List.of(
-                "GET", "POST", "PUT", "DELETE", "OPTIONS"
+                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
         ));
 
         config.setAllowedHeaders(List.of("*"));
 
         config.setAllowCredentials(true);
+
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
