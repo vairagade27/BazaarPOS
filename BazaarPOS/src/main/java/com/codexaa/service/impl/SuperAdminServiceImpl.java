@@ -1,6 +1,7 @@
 package com.codexaa.service.impl;
 
 import com.codexaa.domain.StoreStatus;
+import com.codexaa.domain.UserRole;
 import com.codexaa.dto.DashboardStatsDto;
 import com.codexaa.dto.StoreDto;
 import com.codexaa.model.Store;
@@ -97,5 +98,26 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         store.setContact(dto.getContact());
 
         return storeRepository.save(store);
+    }
+    @Override
+    public List<User> getStoreAdmins() {
+        System.out.println("🔍 DEBUG: Fetching Store Admins...");
+
+        // 1. Check what roles exist in DB roughly
+        long totalCount = userRepository.count();
+        System.out.println("🔍 DEBUG: Total users in DB: " + totalCount);
+
+        // 2. Execute the filter
+        List<User> admins = userRepository.findByRoleAndEnabledTrue(UserRole.ROLE_STORE_ADMIN);
+
+        System.out.println("🔍 DEBUG: Found " + admins.size() + " Store Admins.");
+        if (admins.isEmpty()) {
+            System.out.println("⚠️ WARNING: No users found with role ROLE_STORE_ADMIN and enabled=true");
+            System.out.println("💡 Tip: Check your database. Do any users have role='ROLE_STORE_ADMIN'?");
+        } else {
+            admins.forEach(u -> System.out.println("✅ Found Admin: " + u.getEmail()));
+        }
+
+        return admins;
     }
 }

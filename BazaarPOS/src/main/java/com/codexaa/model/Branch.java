@@ -1,5 +1,6 @@
 package com.codexaa.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.engine.internal.Cascade;
@@ -40,7 +41,9 @@ public class Branch {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "store_id", nullable = false)
+    @JsonIgnore
     private Store store;
+
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id")

@@ -26,95 +26,52 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
         http
-                // Enable CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                // Disable CSRF for APIs
                 .csrf(csrf -> csrf.disable())
-
-                // Stateless session (JWT)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-
-                // API Authorization Rules
                 .authorizeHttpRequests(auth -> auth
-
-                        // Allow CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // Public APIs
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // Super Admin APIs
-                        .requestMatchers("/api/super-admin/**")
-                        .hasAuthority("ROLE_ADMIN")
+                        // ✅ FIXED: Use hasAuthority with the EXACT string from your Enum/JWT
+                        .requestMatchers("/api/super-admin/**").hasAuthority("ROLE_ADMIN")
 
-                        // Store Admin APIs
-                        .requestMatchers("/api/store-admin/**")
-                        .hasAuthority("ROLE_STORE_ADMIN")
+                        .requestMatchers("/api/store-admin/**").hasAuthority("ROLE_STORE_ADMIN")
+                        .requestMatchers("/api/stores/**").hasAnyAuthority("ROLE_STORE_ADMIN", "ROLE_ADMIN")
+                        .requestMatchers("/api/branch/**").hasAuthority("ROLE_BRANCH_MANAGER")
+                        .requestMatchers("/api/store-manager/**").hasAuthority("ROLE_STORE_MANAGER")
+                        .requestMatchers("/api/cashier/**").hasAuthority("ROLE_CASHIER")
 
-                        // Store APIs (for store owners)
-                        .requestMatchers("/api/stores/**")
-                        .hasAnyAuthority("ROLE_STORE_ADMIN", "ROLE_ADMIN")
-
-                        // Branch Manager APIs
-                        .requestMatchers("/api/branch/**")
-                        .hasAuthority("ROLE_BRANCH_MANAGER")
-
-                        // Store Manager APIs
-                        .requestMatchers("/api/store-manager/**")
-                        .hasAuthority("ROLE_STORE_MANAGER")
-
-                        // Cashier APIs
-                        .requestMatchers("/api/cashier/**")
-                        .hasAuthority("ROLE_CASHIER")
-
-                        // Any other request must be authenticated
                         .anyRequest().authenticated()
                 )
-
-                // Add JWT filter
                 .addFilterBefore(jwtValidator, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // Password Encoder
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // Global CORS Configuration
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-
         CorsConfiguration config = new CorsConfiguration();
-
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",
                 "http://localhost:5174",
                 "http://localhost:3000"
         ));
-
-        config.setAllowedMethods(List.of(
-                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
-        ));
-
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
-
         config.setAllowCredentials(true);
-
         config.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
-
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-
         return source;
     }
 }

@@ -22,4 +22,5 @@ public interface SuperAdminService {
     User blockUser(Long userId);
 
     Store createStore(StoreDto storeDto);
+    List<User> getStoreAdmins();
 }

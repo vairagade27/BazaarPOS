@@ -9,8 +9,10 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,12 +27,14 @@ public class JwtProvider {
      * Generate JWT Token from Authentication object
      */
     public String generateToken(Authentication authentication) {
-
-        String authorities = populateAuthorities(authentication.getAuthorities());
+        // Convert authorities to a List of Strings
+        List<String> authList = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toList());
 
         return Jwts.builder()
                 .setSubject(authentication.getName()) // email
-                .claim("authorities", authorities)
+                .claim("authorities", authList) // ✅ Save as LIST
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(key)
@@ -39,12 +43,15 @@ public class JwtProvider {
 
     /**
      * Generate JWT Token from User Email and Role (PRIMARY METHOD)
-     * Use this in AuthService for login/register to ensure role is always included
      */
     public String generateTokenFromUser(String email, String role) {
+        // ✅ Create a List containing the single role
+        List<String> authList = new ArrayList<>();
+        authList.add(role);
+
         return Jwts.builder()
                 .setSubject(email)
-                .claim("authorities", role)
+                .claim("authorities", authList) // ✅ Save as LIST
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(key)
@@ -60,11 +67,26 @@ public class JwtProvider {
     }
 
     /**
-     * Extract authorities/role from JWT token
+     * Extract authorities/role from JWT token as a List
      */
-    public String getRoleFromToken(String token) {
+    public List<String> getAuthoritiesFromToken(String token) {
         Claims claims = extractClaims(token);
-        return claims.get("authorities", String.class);
+
+        // Try to get as List first (new format)
+        Object authObject = claims.get("authorities");
+
+        if (authObject instanceof List) {
+            return (List<String>) authObject;
+        } else if (authObject instanceof String) {
+            // Fallback for old format (comma-separated string)
+            String authStr = (String) authObject;
+            if (authStr == null || authStr.isEmpty()) {
+                return new ArrayList<>();
+            }
+            return List.of(authStr.split(","));
+        }
+
+        return new ArrayList<>();
     }
 
     /**
@@ -83,12 +105,10 @@ public class JwtProvider {
      * Extract claims from JWT token
      */
     private Claims extractClaims(String token) {
-
         if (token == null) {
             throw new RuntimeException("JWT token is missing");
         }
 
-        // Remove Bearer prefix if present
         if (token.startsWith("Bearer ")) {
             token = token.substring(7);
         }
@@ -104,15 +124,5 @@ public class JwtProvider {
         } catch (Exception e) {
             throw new RuntimeException("Invalid JWT token: " + e.getMessage(), e);
         }
-    }
-
-    /**
-     * Convert authorities list to comma-separated string
-     */
-    private String populateAuthorities(Collection<? extends GrantedAuthority> authorities) {
-
-        return authorities.stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(","));
     }
 }
