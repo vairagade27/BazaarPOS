@@ -17,6 +17,7 @@ public interface SuperAdminService {
 
     StoreDto createStore(StoreDto storeDto);
 
+
     StoreDto updateStore(Long storeId, StoreDto storeDto) throws UserExceptions;  // ✅ NEW
 
     StoreDto approveStore(Long storeId) throws UserExceptions;

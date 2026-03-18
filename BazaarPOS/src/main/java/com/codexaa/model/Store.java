@@ -22,7 +22,7 @@ Store {
     @Enumerated(EnumType.STRING)
     private StoreStatus status;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "store_admin_id", nullable = true)
     private User storeAdmin;
 
