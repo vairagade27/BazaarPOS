@@ -2,25 +2,33 @@ package com.codexaa.service;
 
 import com.codexaa.dto.DashboardStatsDto;
 import com.codexaa.dto.StoreDto;
-import com.codexaa.model.Store;
-import com.codexaa.model.User;
+import com.codexaa.dto.UserDto;
+import com.codexaa.exception.UserExceptions;
 
 import java.util.List;
 
 public interface SuperAdminService {
 
+    // ── Dashboard ─────────────────────────────────────────────────────────────
     DashboardStatsDto getDashboardStats();
 
-    List<Store> getAllStores();
+    // ── Stores ────────────────────────────────────────────────────────────────
+    List<StoreDto> getAllStores();
 
-    Store approveStore(Long storeId);
+    StoreDto createStore(StoreDto storeDto);
 
-    Store blockStore(Long storeId);
+    StoreDto updateStore(Long storeId, StoreDto storeDto) throws UserExceptions;  // ✅ NEW
 
-    List<User> getAllUsers();
+    StoreDto approveStore(Long storeId) throws UserExceptions;
 
-    User blockUser(Long userId);
+    StoreDto blockStore(Long storeId) throws UserExceptions;
 
-    Store createStore(StoreDto storeDto);
-    List<User> getStoreAdmins();
+    void deleteStore(Long storeId) throws UserExceptions;                          // ✅ NEW
+
+    // ── Users ─────────────────────────────────────────────────────────────────
+    List<UserDto> getAllUsers();
+
+    UserDto blockUser(Long userId) throws UserExceptions;
+
+    List<UserDto> getStoreAdmins();
 }

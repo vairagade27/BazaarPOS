@@ -36,13 +36,11 @@ public class StoreServiceImpl implements StoreService {
         store.setDescription(storeDto.getDescription());
         store.setStoreType(storeDto.getStoreType());
         store.setStoreAdmin(storeAdmin);
-
+        store.setContact(storeDto.getContact()); // ✅ FIX: was missing, contact never saved
         store.setStatus(StoreStatus.PENDING);
         store.setCreatedAt(LocalDateTime.now());
 
-        Store saved = storeRepository.save(store);
-
-        return StoreMapper.toDTO(saved);
+        return StoreMapper.toDTO(storeRepository.save(store));
     }
 
     @Override
@@ -89,14 +87,21 @@ public class StoreServiceImpl implements StoreService {
             throw new UserExceptions("You don't have permission to update this store");
         }
 
-        store.setBrand(storeDto.getBrand());
-        store.setDescription(storeDto.getDescription());
-        store.setStoreType(storeDto.getStoreType());
-        store.setUpdatedAt(LocalDateTime.now());
+        if (storeDto.getBrand() != null && !storeDto.getBrand().isBlank()) {
+            store.setBrand(storeDto.getBrand());
+        }
+        if (storeDto.getDescription() != null) {
+            store.setDescription(storeDto.getDescription());
+        }
+        if (storeDto.getStoreType() != null) {
+            store.setStoreType(storeDto.getStoreType());
+        }
+        if (storeDto.getContact() != null) {
+            store.setContact(storeDto.getContact()); // ✅ FIX: contact updates now persist
+        }
+        // ✅ FIX: removed manual setUpdatedAt() — @PreUpdate in Store.java handles this automatically
 
-        Store updated = storeRepository.save(store);
-
-        return StoreMapper.toDTO(updated);
+        return StoreMapper.toDTO(storeRepository.save(store));
     }
 
     @Override
@@ -116,8 +121,6 @@ public class StoreServiceImpl implements StoreService {
 
         store.setStatus(status);
 
-        Store updated = storeRepository.save(store);
-
-        return StoreMapper.toDTO(updated);
+        return StoreMapper.toDTO(storeRepository.save(store));
     }
 }

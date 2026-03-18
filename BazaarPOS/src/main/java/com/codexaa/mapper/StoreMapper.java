@@ -25,7 +25,7 @@ public class StoreMapper {
         storeDto.setStatus(store.getStatus());
 
         if (store.getStoreAdmin() != null) {
-            storeDto.setStorAdmin(UserMapper.mapToDto(store.getStoreAdmin()));
+            storeDto.setStoreAdmin(UserMapper.mapToDto(store.getStoreAdmin()));
         }
 
         return storeDto;

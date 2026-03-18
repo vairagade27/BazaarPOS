@@ -8,7 +8,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Data
-public class Store {
+public class
+Store {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,7 +23,7 @@ public class Store {
     private StoreStatus status;
 
     @OneToOne
-    @JoinColumn(name = "store_admin_id", nullable = false)
+    @JoinColumn(name = "store_admin_id", nullable = true)
     private User storeAdmin;
 
     @Embedded

@@ -2,9 +2,10 @@ package com.codexaa.controller;
 
 import com.codexaa.dto.DashboardStatsDto;
 import com.codexaa.dto.StoreDto;
-import com.codexaa.model.Store;
-import com.codexaa.model.User;
+import com.codexaa.dto.UserDto;
+import com.codexaa.exception.UserExceptions;
 import com.codexaa.service.SuperAdminService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,50 +13,71 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/super-admin")
 public class SuperAdminController {
+
     private final SuperAdminService superAdminService;
 
     public SuperAdminController(SuperAdminService superAdminService) {
         this.superAdminService = superAdminService;
     }
 
+    // ── Dashboard ─────────────────────────────────────────────────────────────
+
     @GetMapping("/dashboard")
-    public DashboardStatsDto getDashboardStats() {
-        return superAdminService.getDashboardStats();
+    public ResponseEntity<DashboardStatsDto> getDashboardStats() {
+        return ResponseEntity.ok(superAdminService.getDashboardStats());
+    }
+
+    // ── Stores ────────────────────────────────────────────────────────────────
+
+    @GetMapping("/stores")
+    public ResponseEntity<List<StoreDto>> getAllStores() {
+        return ResponseEntity.ok(superAdminService.getAllStores());
     }
 
     @PostMapping("/create-store")
-    public Store createStore(@RequestBody StoreDto storeDto) {
-        return superAdminService.createStore(storeDto);
+    public ResponseEntity<StoreDto> createStore(@RequestBody StoreDto storeDto) {
+        return ResponseEntity.ok(superAdminService.createStore(storeDto));
     }
 
-    @GetMapping("/stores")
-    public List<Store> getAllStores() {
-        return superAdminService.getAllStores();
+    // ✅ Update store — super admin can update any store regardless of ownership
+    @PutMapping("/update-store/{storeId}")
+    public ResponseEntity<StoreDto> updateStore(
+            @PathVariable Long storeId,
+            @RequestBody StoreDto storeDto
+    ) throws UserExceptions {
+        return ResponseEntity.ok(superAdminService.updateStore(storeId, storeDto));
     }
 
     @PutMapping("/approve-store/{storeId}")
-    public Store approveStore(@PathVariable Long storeId) {
-        return superAdminService.approveStore(storeId);
+    public ResponseEntity<StoreDto> approveStore(@PathVariable Long storeId) throws UserExceptions {
+        return ResponseEntity.ok(superAdminService.approveStore(storeId));
     }
 
     @PutMapping("/block-store/{storeId}")
-    public Store blockStore(@PathVariable Long storeId) {
-        return superAdminService.blockStore(storeId);
+    public ResponseEntity<StoreDto> blockStore(@PathVariable Long storeId) throws UserExceptions {
+        return ResponseEntity.ok(superAdminService.blockStore(storeId));
     }
 
+    @DeleteMapping("/delete-store/{storeId}")
+    public ResponseEntity<String> deleteStore(@PathVariable Long storeId) throws UserExceptions {
+        superAdminService.deleteStore(storeId);
+        return ResponseEntity.ok("Store deleted successfully");
+    }
+
+    // ── Users ─────────────────────────────────────────────────────────────────
+
     @GetMapping("/users")
-    public List<User> getAllUsers() {
-        return superAdminService.getAllUsers();
+    public ResponseEntity<List<UserDto>> getAllUsers() {
+        return ResponseEntity.ok(superAdminService.getAllUsers());
     }
 
     @PutMapping("/block-user/{userId}")
-    public User blockUser(@PathVariable Long userId) {
-        return superAdminService.blockUser(userId);
+    public ResponseEntity<UserDto> blockUser(@PathVariable Long userId) throws UserExceptions {
+        return ResponseEntity.ok(superAdminService.blockUser(userId));
     }
 
-    // ✅ 3. ADD THIS MISSING ENDPOINT
     @GetMapping("/store-admins")
-    public List<User> getStoreAdmins() {
-        return superAdminService.getStoreAdmins();
+    public ResponseEntity<List<UserDto>> getStoreAdmins() {
+        return ResponseEntity.ok(superAdminService.getStoreAdmins());
     }
 }

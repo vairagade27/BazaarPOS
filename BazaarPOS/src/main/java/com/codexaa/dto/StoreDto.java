@@ -9,14 +9,14 @@ import java.time.LocalDateTime;
 @Data
 public class StoreDto {
 
-    private long id;
+    private long id;    
 
     private String brand;
 
     // for creation
     private Long storeAdminId;
 
-    private UserDto storAdmin;
+    private UserDto storeAdmin;
 
     private LocalDateTime createdAt;
 
