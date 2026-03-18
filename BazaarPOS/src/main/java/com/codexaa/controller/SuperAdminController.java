@@ -39,7 +39,6 @@ public class SuperAdminController {
         return ResponseEntity.ok(superAdminService.createStore(storeDto));
     }
 
-    // ✅ Update store — super admin can update any store regardless of ownership
     @PutMapping("/update-store/{storeId}")
     public ResponseEntity<StoreDto> updateStore(
             @PathVariable Long storeId,
@@ -49,17 +48,23 @@ public class SuperAdminController {
     }
 
     @PutMapping("/approve-store/{storeId}")
-    public ResponseEntity<StoreDto> approveStore(@PathVariable Long storeId) throws UserExceptions {
+    public ResponseEntity<StoreDto> approveStore(
+            @PathVariable Long storeId
+    ) throws UserExceptions {
         return ResponseEntity.ok(superAdminService.approveStore(storeId));
     }
 
     @PutMapping("/block-store/{storeId}")
-    public ResponseEntity<StoreDto> blockStore(@PathVariable Long storeId) throws UserExceptions {
+    public ResponseEntity<StoreDto> blockStore(
+            @PathVariable Long storeId
+    ) throws UserExceptions {
         return ResponseEntity.ok(superAdminService.blockStore(storeId));
     }
 
     @DeleteMapping("/delete-store/{storeId}")
-    public ResponseEntity<String> deleteStore(@PathVariable Long storeId) throws UserExceptions {
+    public ResponseEntity<String> deleteStore(
+            @PathVariable Long storeId
+    ) throws UserExceptions {
         superAdminService.deleteStore(storeId);
         return ResponseEntity.ok("Store deleted successfully");
     }
@@ -72,7 +77,9 @@ public class SuperAdminController {
     }
 
     @PutMapping("/block-user/{userId}")
-    public ResponseEntity<UserDto> blockUser(@PathVariable Long userId) throws UserExceptions {
+    public ResponseEntity<UserDto> blockUser(
+            @PathVariable Long userId
+    ) throws UserExceptions {
         return ResponseEntity.ok(superAdminService.blockUser(userId));
     }
 

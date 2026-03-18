@@ -24,9 +24,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public StoreDto createStore(StoreDto storeDto, User user) {
-
         User storeAdmin = userService.getUserById(storeDto.getStoreAdminId());
-
         if (storeAdmin == null) {
             throw new RuntimeException("Store admin not found");
         }
@@ -36,7 +34,7 @@ public class StoreServiceImpl implements StoreService {
         store.setDescription(storeDto.getDescription());
         store.setStoreType(storeDto.getStoreType());
         store.setStoreAdmin(storeAdmin);
-        store.setContact(storeDto.getContact()); // ✅ FIX: was missing, contact never saved
+        store.setContact(storeDto.getContact()); // ✅ contact saved
         store.setStatus(StoreStatus.PENDING);
         store.setCreatedAt(LocalDateTime.now());
 
@@ -45,16 +43,13 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public StoreDto getStoreById(Long id) throws UserExceptions {
-
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new UserExceptions("Store not found"));
-
         return StoreMapper.toDTO(store);
     }
 
     @Override
     public List<StoreDto> getAllStores() {
-
         return storeRepository.findAll()
                 .stream()
                 .map(StoreMapper::toDTO)
@@ -63,27 +58,24 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public StoreDto getStoreByAdmin() throws UserExceptions {
-
         User admin = userService.getCurrentUser();
-
         Store store = storeRepository.findByStoreAdminId(admin.getId());
-
         if (store == null) {
             throw new UserExceptions("Store not found for this admin");
         }
-
         return StoreMapper.toDTO(store);
     }
 
     @Override
     public StoreDto updateStore(Long id, StoreDto storeDto) throws UserExceptions {
-
         User currentUser = userService.getCurrentUser();
 
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new UserExceptions("Store not found"));
 
-        if (!store.getStoreAdmin().getId().equals(currentUser.getId())) {
+        // ✅ ROLE_ADMIN (super admin) can update any store — only enforce ownership for store admins
+        boolean isSuperAdmin = currentUser.getRole().name().equals("ROLE_ADMIN");
+        if (!isSuperAdmin && !store.getStoreAdmin().getId().equals(currentUser.getId())) {
             throw new UserExceptions("You don't have permission to update this store");
         }
 
@@ -97,30 +89,25 @@ public class StoreServiceImpl implements StoreService {
             store.setStoreType(storeDto.getStoreType());
         }
         if (storeDto.getContact() != null) {
-            store.setContact(storeDto.getContact()); // ✅ FIX: contact updates now persist
+            store.setContact(storeDto.getContact()); // ✅ contact updates persist
         }
-        // ✅ FIX: removed manual setUpdatedAt() — @PreUpdate in Store.java handles this automatically
+        // @PreUpdate handles updatedAt automatically
 
         return StoreMapper.toDTO(storeRepository.save(store));
     }
 
     @Override
     public void deleteStore(Long id) throws UserExceptions {
-
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new UserExceptions("Store not found"));
-
         storeRepository.delete(store);
     }
 
     @Override
     public StoreDto moderateStore(Long id, StoreStatus status) throws UserExceptions {
-
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new UserExceptions("Store not found"));
-
         store.setStatus(status);
-
         return StoreMapper.toDTO(storeRepository.save(store));
     }
 }

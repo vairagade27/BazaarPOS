@@ -35,8 +35,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/error").permitAll()  // ✅ prevents false 403 on missing endpoints
 
-                        // ✅ FIXED: Use hasAuthority with the EXACT string from your Enum/JWT
+                        // Super Admin — ROLE_ADMIN covers ALL /api/super-admin/** endpoints
                         .requestMatchers("/api/super-admin/**").hasAuthority("ROLE_ADMIN")
 
                         .requestMatchers("/api/store-admin/**").hasAuthority("ROLE_STORE_ADMIN")
