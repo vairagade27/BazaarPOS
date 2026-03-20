@@ -3,11 +3,11 @@ package com.codexaa.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.engine.internal.Cascade;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+
 @Entity
 @Getter
 @Setter
@@ -36,6 +36,12 @@ public class Branch {
     private LocalTime openTime;
     private LocalTime closeTime;
 
+    // Added — allows deactivating a branch without deleting it
+    // Preserves all order/inventory history when a location closes
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean active = true;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -43,7 +49,6 @@ public class Branch {
     @JoinColumn(name = "store_id", nullable = false)
     @JsonIgnore
     private Store store;
-
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id")

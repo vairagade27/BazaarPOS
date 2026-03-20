@@ -1,7 +1,6 @@
 package com.codexaa.model;
 
 import com.codexaa.domain.UserRole;
-import com.fasterxml.jackson.annotation.JsonIgnore; // ✅ 1. Import this
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import lombok.*;
@@ -32,10 +31,8 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    // ✅ 2. Add @JsonIgnore here
     @ManyToOne
     @JoinColumn(name = "store_id")
-    @JsonIgnore
     private Store store;
 
     @ManyToOne
@@ -48,6 +45,7 @@ public class User {
     @Column(nullable = false)
     private UserRole role;
 
+    // USER ACTIVE OR BLOCKED
     @Column(nullable = false)
     private boolean enabled = true;
 

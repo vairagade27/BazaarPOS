@@ -87,4 +87,6 @@ public class SuperAdminController {
     public ResponseEntity<List<UserDto>> getStoreAdmins() {
         return ResponseEntity.ok(superAdminService.getStoreAdmins());
     }
+
+
 }
