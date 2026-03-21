@@ -19,7 +19,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     Optional<Order> findByIdAndStoreId(Long id, Long storeId);
 
-    List<Order> findByStoreIdOrderByCreatedAtDesc(Long storeId);
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.store.id = :storeId ORDER BY o.createdAt DESC")
+    List<Order> findByStoreIdOrderByCreatedAtDesc(@Param("storeId") Long storeId);
 
     List<Order> findByStoreIdAndStatus(Long storeId, OrderStatus status);
 
@@ -29,12 +30,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     long countByStoreIdAndStatus(Long storeId, OrderStatus status);
 
-    // Total completed revenue for a store
     @Query("SELECT COALESCE(SUM(o.totalPrice), 0) FROM Order o " +
             "WHERE o.store.id = :storeId AND o.status = 'COMPLETED'")
     BigDecimal getTotalRevenueByStoreId(@Param("storeId") Long storeId);
 
-    // Revenue between dates
     @Query("SELECT COALESCE(SUM(o.totalPrice), 0) FROM Order o " +
             "WHERE o.store.id = :storeId AND o.status = 'COMPLETED' " +
             "AND o.createdAt BETWEEN :from AND :to")
@@ -42,7 +41,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
                                           @Param("from") LocalDateTime from,
                                           @Param("to") LocalDateTime to);
 
-    // Daily revenue — for chart (returns Object[]{Date, BigDecimal})
     @Query("SELECT DATE(o.createdAt), COALESCE(SUM(o.totalPrice), 0) " +
             "FROM Order o " +
             "WHERE o.store.id = :storeId AND o.status = 'COMPLETED' " +
@@ -51,7 +49,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Object[]> revenuePerDayAfter(@Param("storeId") Long storeId,
                                       @Param("since") LocalDateTime since);
 
-    // Daily order count — for chart (returns Object[]{Date, Long})
     @Query("SELECT DATE(o.createdAt), COUNT(o) " +
             "FROM Order o " +
             "WHERE o.store.id = :storeId AND o.createdAt >= :since " +
@@ -59,7 +56,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Object[]> countOrdersPerDayAfter(@Param("storeId") Long storeId,
                                           @Param("since") LocalDateTime since);
 
-    // Unique customers count
     @Query("SELECT COUNT(DISTINCT o.customer.id) FROM Order o " +
             "WHERE o.store.id = :storeId AND o.customer IS NOT NULL")
     Long countDistinctCustomersByStoreId(@Param("storeId") Long storeId);

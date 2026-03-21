@@ -12,15 +12,15 @@ import java.util.Optional;
 @Repository
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
-    // All inventory across all branches of a store
     @Query("SELECT i FROM Inventory i WHERE i.branch.store.id = :storeId")
     List<Inventory> findByStoreId(@Param("storeId") Long storeId);
 
     List<Inventory> findByBranchId(Long branchId);
 
-    Optional<Inventory> findByProductIdAndBranchId(Long productId, Long branchId);
+    @Query("SELECT i FROM Inventory i WHERE i.product.id = :productId AND i.branch.id = :branchId ORDER BY i.id ASC")
+    List<Inventory> findAllByProductIdAndBranchId(@Param("productId") Long productId,
+                                                  @Param("branchId") Long branchId);
 
-    // Ownership check — inventory belongs to a branch that belongs to the store
     @Query("SELECT i FROM Inventory i WHERE i.id = :id AND i.branch.store.id = :storeId")
     Optional<Inventory> findByIdAndBranchStoreId(@Param("id") Long id,
                                                  @Param("storeId") Long storeId);

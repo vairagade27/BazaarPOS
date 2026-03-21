@@ -20,9 +20,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class InventoryServiceImpl implements InventoryService {
 
-    private final BranchRepository branchRepository;
+    private final BranchRepository    branchRepository;
     private final InventoryRepository inventoryRepository;
-    private final ProductRepository productRepository;
+    private final ProductRepository   productRepository;
 
     @Override
     public InventoryDto createInventory(InventoryDto dto) throws UserExceptions {
@@ -35,9 +35,7 @@ public class InventoryServiceImpl implements InventoryService {
 
         Inventory inventory = InventoryMapper.toEntity(dto, branch, product);
 
-        Inventory savedInventory = inventoryRepository.save(inventory);
-
-        return InventoryMapper.toDTO(savedInventory);
+        return InventoryMapper.toDTO(inventoryRepository.save(inventory));
     }
 
     @Override
@@ -48,9 +46,7 @@ public class InventoryServiceImpl implements InventoryService {
 
         inventory.setQuantity(dto.getQuantity());
 
-        Inventory updatedInventory = inventoryRepository.save(inventory);
-
-        return InventoryMapper.toDTO(updatedInventory);
+        return InventoryMapper.toDTO(inventoryRepository.save(inventory));
     }
 
     @Override
@@ -74,19 +70,21 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     public InventoryDto findByProductIdAndBranchId(Long productId, Long branchId) throws UserExceptions {
 
-        Inventory inventory = inventoryRepository
-                .findByProductIdAndBranchId(productId, branchId)
-                .orElseThrow(() -> new UserExceptions("Inventory not found"));
+        List<Inventory> results = inventoryRepository
+                .findAllByProductIdAndBranchId(productId, branchId);
 
-        return InventoryMapper.toDTO(inventory);
+        if (results.isEmpty()) {
+            throw new UserExceptions("Inventory not found");
+        }
+
+        return InventoryMapper.toDTO(results.get(0));
     }
 
     @Override
     public List<InventoryDto> getAllInventoryByBranchId(Long branchId) {
 
-        List<Inventory> inventories = inventoryRepository.findByBranchId(branchId);
-
-        return inventories.stream()
+        return inventoryRepository.findByBranchId(branchId)
+                .stream()
                 .map(InventoryMapper::toDTO)
                 .collect(Collectors.toList());
     }

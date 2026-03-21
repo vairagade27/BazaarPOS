@@ -36,16 +36,12 @@ public class EmployeeServiceImpl implements EmployeeService {
         Branch branch = null;
 
         if (employee.getRole() == UserRole.ROLE_BRANCH_MANAGER) {
-
             if (employee.getBranchId() == null) {
                 throw new UserExceptions("Branch ID is required for Branch Manager");
             }
-
             branch = branchRepository.findById(employee.getBranchId())
                     .orElseThrow(() -> new UserExceptions("Branch not found"));
-
             if (!branch.getStore().getId().equals(storeId)) {
-
                 throw new UserExceptions("Branch does not belong to this store");
             }
         }
@@ -72,12 +68,10 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .orElseThrow(() -> new UserExceptions("Branch not found"));
 
         if (employee.getRole() == UserRole.ROLE_CASHIER) {
-
             User user = UserMapper.toEntity(employee);
             user.setBranch(branch);
             user.setStore(branch.getStore());
             user.setPassword(passwordEncoder.encode(employee.getPassword()));
-
             return UserMapper.mapToDto(userRepository.save(user));
         }
 
@@ -85,7 +79,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
-    public User updateEmployee(Long employeeId, UserDto employeeDetails) throws UserExceptions {
+    public UserDto updateEmployee(Long employeeId, UserDto employeeDetails) throws UserExceptions {
 
         User user = userRepository.findById(employeeId)
                 .orElseThrow(() -> new UserExceptions("Employee not found"));
@@ -98,12 +92,17 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         user.setEmail(employeeDetails.getEmail());
         user.setFullName(employeeDetails.getFullName());
+        user.setPhone(employeeDetails.getPhone());
 
-        if (employeeDetails.getPassword() != null) {
+        if (employeeDetails.getRole() != null) {
+            user.setRole(employeeDetails.getRole());
+        }
+
+        if (employeeDetails.getPassword() != null && !employeeDetails.getPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(employeeDetails.getPassword()));
         }
 
-        return userRepository.save(user);
+        return UserMapper.mapToDto(userRepository.save(user));
     }
 
     @Override
@@ -116,7 +115,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
-    public List<User> findStoreEmployee(Long storeId, UserRole role) throws UserExceptions {
+    public List<UserDto> findStoreEmployee(Long storeId, UserRole role) throws UserExceptions {
 
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new UserExceptions("Store not found"));
@@ -124,11 +123,12 @@ public class EmployeeServiceImpl implements EmployeeService {
         return userRepository.findByStore(store)
                 .stream()
                 .filter(user -> role == null || user.getRole() == role)
+                .map(UserMapper::mapToDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<User> findBranchEmployee(Long branchId, UserRole role) throws UserExceptions {
+    public List<UserDto> findBranchEmployee(Long branchId, UserRole role) throws UserExceptions {
 
         Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new UserExceptions("Branch not found"));
@@ -136,6 +136,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         return userRepository.findByBranch(branch)
                 .stream()
                 .filter(user -> role == null || user.getRole() == role)
+                .map(UserMapper::mapToDto)
                 .collect(Collectors.toList());
     }
 }

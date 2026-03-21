@@ -17,7 +17,6 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -35,14 +34,9 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository      userRepository;
     private final EntityMapper        mapper;
 
-    // ══════════════════════════════════════════════════════════════════════════
-    //  HELPERS
-    // ══════════════════════════════════════════════════════════════════════════
-
     private Store requireStore(Long storeId) throws UserExceptions {
         return storeRepository.findById(storeId)
-                .orElseThrow(() -> new UserExceptions.NotFoundException(
-                        "Store not found: " + storeId));
+                .orElseThrow(() -> new UserExceptions.NotFoundException("Store not found: " + storeId));
     }
 
     private Branch requireBranch(Long storeId, Long branchId) throws UserExceptions {
@@ -67,9 +61,15 @@ public class OrderServiceImpl implements OrderService {
         return "ORD-" + System.currentTimeMillis();
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    //  GET ORDERS
-    // ══════════════════════════════════════════════════════════════════════════
+    private Inventory requireInventory(Long productId, Long branchId, String productName, String branchName)
+            throws UserExceptions {
+        List<Inventory> results = inventoryRepository.findAllByProductIdAndBranchId(productId, branchId);
+        if (results.isEmpty()) {
+            throw new UserExceptions.NotFoundException(
+                    "No inventory for product '" + productName + "' in branch '" + branchName + "'");
+        }
+        return results.get(0);
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -79,24 +79,11 @@ public class OrderServiceImpl implements OrderService {
                 orderRepository.findByStoreIdOrderByCreatedAtDesc(storeId));
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    //  GET ORDER BY ID
-    // ══════════════════════════════════════════════════════════════════════════
-
     @Override
     @Transactional(readOnly = true)
     public OrderDto getOrderById(Long storeId, Long orderId) throws UserExceptions {
         return mapper.toOrderDto(requireOrder(storeId, orderId));
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    //  CREATE ORDER
-    //  1. Validate store + resolve branch
-    //  2. Resolve optional registered customer (User.enabled check)
-    //  3. Per item: validate product + check Inventory.quantity + deduct
-    //  4. Build Order + OrderItems with Product snapshots
-    //  5. Recalculate totals and persist
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Override
     public OrderDto createOrder(Long storeId, OrderDto.CreateRequest req) throws UserExceptions {
@@ -107,12 +94,10 @@ public class OrderServiceImpl implements OrderService {
             throw new UserExceptions("Order must contain at least one item");
         }
 
-        // Resolve branch
         Branch branch;
         if (req.getBranchId() != null) {
             branch = requireBranch(storeId, req.getBranchId());
         } else {
-            // Pick first branch of this store as default
             branch = branchRepository.findByStoreId(storeId)
                     .stream().findFirst()
                     .orElseThrow(() -> new UserExceptions.NotFoundException(
@@ -120,8 +105,6 @@ public class OrderServiceImpl implements OrderService {
         }
         final Branch finalBranch = branch;
 
-        // Resolve optional registered customer
-        // User.enabled is your active flag (not active/blocked)
         User customer = null;
         if (req.getCustomerId() != null) {
             customer = userRepository.findById(req.getCustomerId())
@@ -132,7 +115,6 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
-        // Build Order shell
         Order order = Order.builder()
                 .orderNumber(generateOrderNumber())
                 .status(OrderStatus.PENDING)
@@ -144,12 +126,11 @@ public class OrderServiceImpl implements OrderService {
                 .shippingAddress(req.getShippingAddress())
                 .notes(req.getNotes())
                 .discount(req.getDiscount() != null ? req.getDiscount() : BigDecimal.ZERO)
-                .tax(req.getTax()      != null ? req.getTax()      : BigDecimal.ZERO)
+                .tax(req.getTax()           != null ? req.getTax()      : BigDecimal.ZERO)
                 .subtotal(BigDecimal.ZERO)
                 .totalPrice(BigDecimal.ZERO)
                 .build();
 
-        // Process each line item
         for (OrderItemDto.Request itemReq : req.getItems()) {
 
             if (itemReq.getProductId() == null) {
@@ -159,17 +140,12 @@ public class OrderServiceImpl implements OrderService {
                 throw new UserExceptions("Each item must have a quantity greater than 0");
             }
 
-            // Product fields: id, name, brand, sku, price, quantity, store, category
             Product product = requireProduct(storeId, itemReq.getProductId());
 
-            // Inventory.quantity is your stock field (not currentStock)
-            Inventory inv = inventoryRepository
-                    .findByProductIdAndBranchId(product.getId(), finalBranch.getId())
-                    .orElseThrow(() -> new UserExceptions.NotFoundException(
-                            "No inventory for product '" + product.getName()
-                                    + "' in branch '" + finalBranch.getName() + "'"));
+            Inventory inv = requireInventory(
+                    product.getId(), finalBranch.getId(),
+                    product.getName(), finalBranch.getName());
 
-            // Safe unbox — Inventory.quantity is Integer (nullable)
             int availableQty = inv.getQuantity() != null ? inv.getQuantity() : 0;
 
             if (availableQty < itemReq.getQuantity()) {
@@ -179,25 +155,20 @@ public class OrderServiceImpl implements OrderService {
                                 + ", Requested: " + itemReq.getQuantity());
             }
 
-            // Deduct from Inventory.quantity
             inv.setQuantity(availableQty - itemReq.getQuantity());
             inventoryRepository.save(inv);
 
-            // Unit price: use provided price or fall back to Product.price
-            BigDecimal unitPrice    = itemReq.getUnitPrice() != null
-                    ? itemReq.getUnitPrice() : product.getPrice();
-            BigDecimal itemDiscount = itemReq.getDiscount() != null
-                    ? itemReq.getDiscount() : BigDecimal.ZERO;
+            BigDecimal unitPrice    = itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : product.getPrice();
+            BigDecimal itemDiscount = itemReq.getDiscount()  != null ? itemReq.getDiscount()  : BigDecimal.ZERO;
 
-            // Snapshot product.name and product.sku at order time
             OrderItem orderItem = OrderItem.builder()
                     .product(product)
-                    .productName(product.getName())  // Product.name
-                    .productSku(product.getSku())    // Product.sku
+                    .productName(product.getName())
+                    .productSku(product.getSku())
                     .quantity(itemReq.getQuantity())
                     .unitPrice(unitPrice)
                     .discount(itemDiscount)
-                    .lineTotal(BigDecimal.ZERO)      // computed by @PrePersist
+                    .lineTotal(BigDecimal.ZERO)
                     .build();
 
             order.addItem(orderItem);
@@ -205,19 +176,9 @@ public class OrderServiceImpl implements OrderService {
 
         order.recalculate();
         Order saved = orderRepository.save(order);
-
         log.info("Order created: {} for store: {}", saved.getOrderNumber(), storeId);
         return mapper.toOrderDto(saved);
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    //  UPDATE ORDER STATUS
-    //  PENDING    → PROCESSING | CANCELLED
-    //  PROCESSING → COMPLETED  | CANCELLED  (Inventory.quantity restored)
-    //  COMPLETED  → REFUNDED
-    //  CANCELLED  → terminal
-    //  REFUNDED   → terminal
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Override
     public OrderDto updateOrderStatus(Long storeId, Long orderId, String statusStr)
@@ -237,7 +198,6 @@ public class OrderServiceImpl implements OrderService {
         OrderStatus current = order.getStatus();
         validateStatusTransition(current, newStatus);
 
-        // Restore Inventory.quantity when cancelling
         if (newStatus == OrderStatus.CANCELLED
                 && (current == OrderStatus.PENDING || current == OrderStatus.PROCESSING)) {
             restoreStock(order);
@@ -249,10 +209,6 @@ public class OrderServiceImpl implements OrderService {
         return mapper.toOrderDto(saved);
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    //  CANCEL ORDER
-    // ══════════════════════════════════════════════════════════════════════════
-
     @Override
     public OrderDto cancelOrder(Long storeId, Long orderId, String reason) throws UserExceptions {
         Order order = requireOrder(storeId, orderId);
@@ -262,8 +218,7 @@ public class OrderServiceImpl implements OrderService {
                     "Completed orders cannot be cancelled. Use REFUNDED instead.");
         }
         if (order.getStatus() == OrderStatus.CANCELLED) {
-            throw new UserExceptions.InvalidOrderStatusException(
-                    "Order is already cancelled.");
+            throw new UserExceptions.InvalidOrderStatusException("Order is already cancelled.");
         }
 
         restoreStock(order);
@@ -274,32 +229,23 @@ public class OrderServiceImpl implements OrderService {
         return mapper.toOrderDto(orderRepository.save(order));
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    //  PRIVATE — RESTORE INVENTORY.QUANTITY
-    // ══════════════════════════════════════════════════════════════════════════
-
     private void restoreStock(Order order) {
         if (order.getBranch() == null) return;
         Long branchId = order.getBranch().getId();
 
         for (OrderItem item : order.getItems()) {
-            Optional<Inventory> optInv = inventoryRepository
-                    .findByProductIdAndBranchId(item.getProduct().getId(), branchId);
+            List<Inventory> results = inventoryRepository
+                    .findAllByProductIdAndBranchId(item.getProduct().getId(), branchId);
 
-            if (optInv.isPresent()) {
-                Inventory inv   = optInv.get();
-                // Inventory.quantity — safe unbox
-                int current     = inv.getQuantity() != null ? inv.getQuantity() : 0;
+            if (!results.isEmpty()) {
+                Inventory inv = results.get(0);
+                int current   = inv.getQuantity() != null ? inv.getQuantity() : 0;
                 inv.setQuantity(current + item.getQuantity());
                 inventoryRepository.save(inv);
             }
         }
         log.info("Stock restored for order: {}", order.getOrderNumber());
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    //  PRIVATE — VALIDATE STATUS TRANSITION
-    // ══════════════════════════════════════════════════════════════════════════
 
     private void validateStatusTransition(OrderStatus from, OrderStatus to)
             throws UserExceptions.InvalidOrderStatusException {
@@ -315,8 +261,7 @@ public class OrderServiceImpl implements OrderService {
         Set<OrderStatus> next = allowed.getOrDefault(from, Set.of());
         if (!next.contains(to)) {
             throw new UserExceptions.InvalidOrderStatusException(
-                    "Cannot transition from " + from + " to " + to
-                            + ". Allowed: " + next);
+                    "Cannot transition from " + from + " to " + to + ". Allowed: " + next);
         }
     }
 }
