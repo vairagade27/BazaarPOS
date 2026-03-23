@@ -35,16 +35,41 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/error").permitAll()  // ✅ prevents false 403 on missing endpoints
+                        .requestMatchers("/error").permitAll()
 
-                        // Super Admin — ROLE_ADMIN covers ALL /api/super-admin/** endpoints
+
                         .requestMatchers("/api/super-admin/**").hasAuthority("ROLE_ADMIN")
 
-                        .requestMatchers("/api/store-admin/**").hasAuthority("ROLE_STORE_ADMIN")
-                        .requestMatchers("/api/stores/**").hasAnyAuthority("ROLE_STORE_ADMIN", "ROLE_ADMIN")
-                        .requestMatchers("/api/branch/**").hasAuthority("ROLE_BRANCH_MANAGER")
-                        .requestMatchers("/api/store-manager/**").hasAuthority("ROLE_STORE_MANAGER")
-                        .requestMatchers("/api/cashier/**").hasAuthority("ROLE_CASHIER")
+
+                        .requestMatchers("/api/store-admin/**").hasAnyAuthority(
+                                "ROLE_STORE_ADMIN", "ROLE_STORE_MANAGER",
+                                "ROLE_BRANCH_MANAGER", "ROLE_CASHIER")
+
+                        .requestMatchers("/api/stores/**").hasAnyAuthority(
+                                "ROLE_STORE_ADMIN", "ROLE_ADMIN")
+
+                        .requestMatchers("/api/branch/**").hasAnyAuthority(
+                                "ROLE_BRANCH_MANAGER", "ROLE_STORE_MANAGER",
+                                "ROLE_STORE_ADMIN", "ROLE_CASHIER")
+
+
+                        .requestMatchers("/api/store-manager/**").hasAnyAuthority(
+                                "ROLE_STORE_MANAGER", "ROLE_STORE_ADMIN")
+
+
+                        .requestMatchers("/api/cashier/**").hasAnyAuthority(
+                                "ROLE_CASHIER", "ROLE_BRANCH_MANAGER",
+                                "ROLE_STORE_MANAGER", "ROLE_STORE_ADMIN")
+
+                        // Shift endpoints — all staff roles
+                        .requestMatchers("/api/shifts/**").hasAnyAuthority(
+                                "ROLE_CASHIER", "ROLE_BRANCH_MANAGER",
+                                "ROLE_STORE_MANAGER", "ROLE_STORE_ADMIN")
+
+                        // Employee endpoints
+                        .requestMatchers("/api/employees/**").hasAnyAuthority(
+                                "ROLE_STORE_ADMIN", "ROLE_STORE_MANAGER",
+                                "ROLE_BRANCH_MANAGER")
 
                         .anyRequest().authenticated()
                 )
