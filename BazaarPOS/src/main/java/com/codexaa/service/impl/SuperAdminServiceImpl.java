@@ -49,10 +49,17 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                 .toList();
     }
 
-    @Override
     public StoreDto createStore(StoreDto dto) {
+
+        // ✅ Check if admin already has a store
+        Store existingStore = storeRepository.findByStoreAdminId(dto.getStoreAdminId());
+        if (existingStore != null) {
+            throw new RuntimeException("This admin already has a store!");
+        }
+
         User storeAdmin = userRepository.findById(dto.getStoreAdminId())
-                .orElseThrow(() -> new RuntimeException("Store admin not found with id: " + dto.getStoreAdminId()));
+                .orElseThrow(() -> new RuntimeException(
+                        "Store admin not found with id: " + dto.getStoreAdminId()));
 
         Store store = new Store();
         store.setBrand(dto.getBrand());

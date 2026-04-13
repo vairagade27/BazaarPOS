@@ -25,6 +25,8 @@ public class Product {
     private String name;
 
     private String brand;
+    @Column(unique = true)
+    private String barcode;
 
     @Column(nullable = false)
     private String sku;

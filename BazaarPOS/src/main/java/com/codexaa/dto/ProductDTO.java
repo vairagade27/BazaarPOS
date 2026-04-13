@@ -17,7 +17,7 @@ public class ProductDTO {
     private String sku;
     private BigDecimal price;
     private Integer quantity;
-
+    private String barcode;
     private Long storeId;
     private Long categoryId;
 }
